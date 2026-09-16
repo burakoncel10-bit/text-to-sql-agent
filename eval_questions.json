@@ -1,0 +1,122 @@
+[
+  {
+    "id": "q01",
+    "category": "simple_filter",
+    "question": "How many completed orders were placed in 2026?",
+    "gold_sql": "SELECT COUNT(*) FROM orders WHERE status = 'completed' AND order_date >= '2026-01-01' AND order_date < '2027-01-01'"
+  },
+  {
+    "id": "q02",
+    "category": "join_aggregate",
+    "question": "Which product category generated the highest net revenue from completed orders?",
+    "gold_sql": "SELECT c.category_name, SUM(oi.quantity * oi.unit_price * (1 - oi.discount_rate)) AS net_revenue FROM order_items oi JOIN orders o ON o.order_id = oi.order_id JOIN products p ON p.product_id = oi.product_id JOIN categories c ON c.category_id = p.category_id WHERE o.status = 'completed' GROUP BY c.category_name ORDER BY net_revenue DESC LIMIT 1"
+  },
+  {
+    "id": "q03",
+    "category": "date_grouping",
+    "question": "What was the net revenue per month in the first half of 2026, for completed orders?",
+    "gold_sql": "SELECT strftime('%Y-%m', o.order_date) AS month, SUM(oi.quantity * oi.unit_price * (1 - oi.discount_rate)) AS net_revenue FROM orders o JOIN order_items oi ON oi.order_id = o.order_id WHERE o.status = 'completed' AND o.order_date >= '2026-01-01' AND o.order_date < '2026-07-01' GROUP BY month ORDER BY month"
+  },
+  {
+    "id": "q04",
+    "category": "window_function",
+    "question": "What is the best selling product in each category by units sold, considering only completed orders?",
+    "gold_sql": "SELECT category_name, product_name, units FROM (SELECT c.category_name, p.product_name, SUM(oi.quantity) AS units, ROW_NUMBER() OVER (PARTITION BY c.category_id ORDER BY SUM(oi.quantity) DESC) AS rn FROM order_items oi JOIN orders o ON o.order_id = oi.order_id JOIN products p ON p.product_id = oi.product_id JOIN categories c ON c.category_id = p.category_id WHERE o.status = 'completed' GROUP BY c.category_id, c.category_name, p.product_id, p.product_name) WHERE rn = 1 ORDER BY category_name"
+  },
+  {
+    "id": "q05",
+    "category": "subquery",
+    "question": "Which customers spent more than the average customer, and how much did they spend?",
+    "gold_sql": "WITH spend AS (SELECT o.customer_id, SUM(oi.quantity*oi.unit_price*(1-oi.discount_rate)) AS total FROM orders o JOIN order_items oi ON oi.order_id = o.order_id WHERE o.status = 'completed' GROUP BY o.customer_id) SELECT c.full_name, ROUND(s.total,2) AS total_spent FROM spend s JOIN customers c ON c.customer_id = s.customer_id WHERE s.total > (SELECT AVG(total) FROM spend) ORDER BY total_spent DESC"
+  },
+  {
+    "id": "q06",
+    "category": "date_grouping",
+    "question": "What was the net revenue for each quarter of 2025, for completed orders?",
+    "gold_sql": "SELECT CASE WHEN CAST(strftime('%m', o.order_date) AS INTEGER) <= 3 THEN '2025-Q1' WHEN CAST(strftime('%m', o.order_date) AS INTEGER) <= 6 THEN '2025-Q2' WHEN CAST(strftime('%m', o.order_date) AS INTEGER) <= 9 THEN '2025-Q3' ELSE '2025-Q4' END AS quarter, ROUND(SUM(oi.quantity*oi.unit_price*(1-oi.discount_rate)),2) AS net_revenue FROM orders o JOIN order_items oi ON oi.order_id = o.order_id WHERE o.status = 'completed' AND o.order_date >= '2025-01-01' AND o.order_date < '2026-01-01' GROUP BY quarter ORDER BY quarter"
+  },
+  {
+    "id": "q07",
+    "category": "ambiguous",
+    "question": "Who is our best customer?",
+    "gold_sql": "SELECT c.full_name, ROUND(SUM(oi.quantity*oi.unit_price*(1-oi.discount_rate)),2) AS total_spent FROM customers c JOIN orders o ON o.customer_id = c.customer_id JOIN order_items oi ON oi.order_id = o.order_id WHERE o.status = 'completed' GROUP BY c.customer_id, c.full_name ORDER BY total_spent DESC LIMIT 1"
+  },
+  {
+    "id": "q08",
+    "category": "simple_filter",
+    "question": "How many customers are based in Germany?",
+    "gold_sql": "SELECT COUNT(*) FROM customers WHERE country = 'Germany'"
+  },
+  {
+    "id": "q09",
+    "category": "simple_filter",
+    "question": "How many Corporate segment customers signed up in 2025?",
+    "gold_sql": "SELECT COUNT(*) FROM customers WHERE segment = 'Corporate' AND signup_date >= '2025-01-01' AND signup_date < '2026-01-01'"
+  },
+  {
+    "id": "q10",
+    "category": "simple_filter",
+    "question": "List the products that are not active.",
+    "gold_sql": "SELECT product_name FROM products WHERE is_active = 0 ORDER BY product_name"
+  },
+  {
+    "id": "q11",
+    "category": "simple_filter",
+    "question": "How many orders placed through the mobile channel were cancelled?",
+    "gold_sql": "SELECT COUNT(*) FROM orders WHERE channel = 'mobile' AND status = 'cancelled'"
+  },
+  {
+    "id": "q12",
+    "category": "join_aggregate",
+    "question": "What is the total net revenue for each product category, counting only completed orders?",
+    "gold_sql": "SELECT c.category_name, ROUND(SUM(oi.quantity * oi.unit_price * (1 - oi.discount_rate)),2) AS net_revenue FROM order_items oi JOIN orders o ON o.order_id = oi.order_id JOIN products p ON p.product_id = oi.product_id JOIN categories c ON c.category_id = p.category_id WHERE o.status = 'completed' GROUP BY c.category_name ORDER BY net_revenue DESC"
+  },
+  {
+    "id": "q13",
+    "category": "join_aggregate",
+    "question": "Which 3 products sold the most units in completed orders?",
+    "gold_sql": "SELECT p.product_name, SUM(oi.quantity) AS units FROM order_items oi JOIN orders o ON o.order_id = oi.order_id JOIN products p ON p.product_id = oi.product_id WHERE o.status = 'completed' GROUP BY p.product_name ORDER BY units DESC LIMIT 3"
+  },
+  {
+    "id": "q14",
+    "category": "join_aggregate",
+    "question": "What is the average order value for each customer segment, for completed orders?",
+    "gold_sql": "WITH t AS (SELECT o.order_id, o.customer_id, SUM(oi.quantity * oi.unit_price * (1 - oi.discount_rate)) AS order_total FROM orders o JOIN order_items oi ON oi.order_id = o.order_id WHERE o.status = 'completed' GROUP BY o.order_id, o.customer_id) SELECT c.segment, ROUND(AVG(t.order_total),2) AS avg_order_value FROM t JOIN customers c ON c.customer_id = t.customer_id GROUP BY c.segment ORDER BY c.segment"
+  },
+  {
+    "id": "q15",
+    "category": "join_aggregate",
+    "question": "What is the total net revenue by customer country, for completed orders?",
+    "gold_sql": "SELECT c.country, ROUND(SUM(oi.quantity * oi.unit_price * (1 - oi.discount_rate)),2) AS net_revenue FROM customers c JOIN orders o ON o.customer_id = c.customer_id JOIN order_items oi ON oi.order_id = o.order_id WHERE o.status = 'completed' GROUP BY c.country ORDER BY net_revenue DESC"
+  },
+  {
+    "id": "q16",
+    "category": "date_grouping",
+    "question": "How many completed orders were placed in each month of the first half of 2026?",
+    "gold_sql": "SELECT strftime('%Y-%m', order_date) AS month, COUNT(*) AS orders FROM orders WHERE status = 'completed' AND order_date >= '2026-01-01' AND order_date < '2026-07-01' GROUP BY month ORDER BY month"
+  },
+  {
+    "id": "q17",
+    "category": "ranking",
+    "question": "Which 5 products have the highest profit amount per unit, where profit per unit is unit_price minus unit_cost?",
+    "gold_sql": "SELECT product_name, ROUND(unit_price - unit_cost,2) AS margin FROM products ORDER BY margin DESC LIMIT 5"
+  },
+  {
+    "id": "q18",
+    "category": "subquery",
+    "question": "Which customers have never had a cancelled order? Return their customer id and name.",
+    "gold_sql": "SELECT customer_id, full_name FROM customers WHERE customer_id NOT IN (SELECT customer_id FROM orders WHERE status = 'cancelled') ORDER BY customer_id"
+  },
+  {
+    "id": "q19",
+    "category": "ambiguous",
+    "question": "How did last month go?",
+    "gold_sql": "SELECT strftime('%Y-%m', o.order_date) AS month, COUNT(DISTINCT o.order_id) AS orders, ROUND(SUM(oi.quantity*oi.unit_price*(1-oi.discount_rate)),2) AS net_revenue FROM orders o JOIN order_items oi ON oi.order_id = o.order_id WHERE o.status = 'completed' AND o.order_date >= '2026-05-01' AND o.order_date < '2026-06-01' GROUP BY month"
+  },
+  {
+    "id": "q20",
+    "category": "schema_detail",
+    "question": "Which inactive products have still been sold in completed orders, and how many units?",
+    "gold_sql": "SELECT p.product_name, SUM(oi.quantity) AS units FROM products p JOIN order_items oi ON oi.product_id = p.product_id JOIN orders o ON o.order_id = oi.order_id WHERE p.is_active = 0 AND o.status = 'completed' GROUP BY p.product_name ORDER BY units DESC"
+  }
+]
