@@ -36,6 +36,7 @@ execute on SQLite  ──→  on error: feed the parser message back, retry once
    ↓
 rows + the SQL that produced them
 ```
+![Streamlit interface](screenshot.png)
 
 The schema is read out of `sqlite_master` at request time rather than pasted
 into the prompt. A hand-written schema silently goes stale the first time a
